@@ -14,6 +14,7 @@ import os
 import platform
 import shutil
 import time
+import logging
 from pathlib import Path
 import cv2
 import torch
@@ -38,11 +39,14 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 def detect(opt):
-    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, exist_ok= \
+    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, quiet, exist_ok= \
         opt.output, opt.source, opt.yolo_model, opt.deep_sort_model, opt.show_vid, opt.save_vid, \
-        opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.exist_ok
+        opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.quiet, opt.exist_ok, 
     webcam = source == '0' or source.startswith(
         'rtsp') or source.startswith('http') or source.endswith('.txt')
+
+    if quiet:
+        logging.getLogger("yolov5").setLevel(logging.WARNING)
 
     device = select_device(opt.device)
     # initialize deepsort
@@ -252,6 +256,7 @@ def main():
     parser.add_argument('--project', default=ROOT / 'runs/track', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--quiet', action='store_true', help='suppress all non-problem output')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
 
