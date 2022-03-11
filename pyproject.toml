@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "yolov5_deepsort_pytorch"
+name = "yolo_track"
 version = "0.1.0"
 description = "yolov5 + deepsort + pytorch"
 authors = ["redthing1 <redthing1@alt.icu>"]
@@ -37,4 +37,4 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-yolo_track = "yolov5_deepsort_pytorch.track:main"
+yolo_track = "yolo_track.track:main"
