@@ -55,8 +55,8 @@ RUN poetry export --without-hashes -f requirements.txt > requirements.txt
 
 RUN \
     # workaround to use torch cpu
-    sed -i 's/torch==1.9.0/torch==1.9.0+cpu/g' requirements.txt \
-    && sed -i '/^torch==1.9.0.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt \
+    sed -i 's/torch==1.10.0/torch==1.10.0+cpu/g' requirements.txt \
+    && sed -i '/^torch==1.10.0.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt \
     # workaround to use headless opencv
     && sed -i 's/opencv-python/opencv-python-headless/g' requirements.txt
 
