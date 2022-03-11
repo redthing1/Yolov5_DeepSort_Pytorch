@@ -16,7 +16,6 @@ import shutil
 import time
 import logging
 from pathlib import Path
-import cv2
 import torch
 import torch.backends.cudnn as cudnn
 
@@ -210,12 +209,14 @@ def detect(opt):
             # Stream results
             im0 = annotator.result()
             if show_vid:
+                import cv2
                 cv2.imshow(str(p), im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
                     raise StopIteration
 
             # Save results (image with detections)
             if save_vid:
+                import cv2
                 if vid_path != save_path:  # new video
                     vid_path = save_path
                     if isinstance(vid_writer, cv2.VideoWriter):
