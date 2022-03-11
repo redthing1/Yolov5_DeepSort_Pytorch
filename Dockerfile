@@ -53,9 +53,12 @@ COPY poetry.lock pyproject.toml ./
 # freeze dependencies to a requirements.txt
 RUN poetry export --without-hashes -f requirements.txt > requirements.txt
 
-# workaround to use torch cpu
-RUN sed -i 's/torch==1.9.0/torch==1.9.0+cpu/g' requirements.txt \
-    && sed -i '/^torch==1.9.0.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt
+RUN \
+    # workaround to use torch cpu
+    sed -i 's/torch==1.9.0/torch==1.9.0+cpu/g' requirements.txt \
+    && sed -i '/^torch==1.9.0.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt \
+    # workaround to use headless opencv
+    && sed -i 's/opencv-python/opencv-python-headless/g' requirements.txt
 
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
 # RUN poetry install --no-dev

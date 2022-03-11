@@ -6,7 +6,7 @@ authors = ["redthing1 <redthing1@alt.icu>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
-opencv-python-headless = "^4.5.5"
+opencv-python = "^4.5.5"
 matplotlib = ">=3.2.2"
 numpy = ">=1.18.5"
 
@@ -32,6 +32,10 @@ torch = "1.10.0"
 torchvision = "0.11.1"
 
 [tool.poetry.dev-dependencies]
+poethepoet = "^0.10.0"
+
+[tool.poe.tasks]
+mode-headless = "pip3 install opencv-python-headless==\"4.5.5.64\""
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
