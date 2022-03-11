@@ -6,9 +6,10 @@ authors = ["redthing1 <redthing1@alt.icu>"]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
+opencv-python-headless = "^4.5.5"
 matplotlib = ">=3.2.2"
 numpy = ">=1.18.5"
-opencv-python = ">=4.1.2"
+
 Pillow = ">=7.1.2"
 PyYAML = ">=5.3.1"
 requests = ">=2.23.0"
