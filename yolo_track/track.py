@@ -39,9 +39,9 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 def detect(opt):
-    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, quiet, out_txt, exist_ok= \
+    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, quiet, max_frames, out_txt, exist_ok= \
         opt.output, opt.source, opt.yolo_model, opt.deep_sort_model, opt.show_vid, opt.save_vid, \
-        opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.quiet, opt.out_txt, opt.exist_ok, 
+        opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.quiet, opt.frames, opt.out_txt, opt.exist_ok, 
     webcam = source == '0' or source.startswith(
         'rtsp') or source.startswith('http') or source.endswith('.txt')
 
@@ -117,7 +117,12 @@ def detect(opt):
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
+
+    seen_frames = 0
     for frame_idx, (path, img, im0s, vid_cap, s) in enumerate(dataset):
+        if max_frames > 0 and seen_frames >= max_frames:
+            break
+
         t1 = time_sync()
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -126,6 +131,7 @@ def detect(opt):
             img = img.unsqueeze(0)
         t2 = time_sync()
         dt[0] += t2 - t1
+        seen_frames += 1
 
         # Inference
         visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if opt.visualize else False
@@ -270,6 +276,7 @@ def main():
     parser.add_argument('--out-txt', default=None, help='directly override output txt file')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quiet', action='store_true', help='suppress all non-problem output')
+    parser.add_argument('--frames', type=int, default=0, help='max frame count')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
 
