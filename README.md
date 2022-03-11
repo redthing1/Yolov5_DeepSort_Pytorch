@@ -12,6 +12,8 @@ poetry install
 poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --show-vid
 # run tracking and stream output to file
 poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --save-txt --out-txt /tmp/track1.txt
+# youtube livestream
+poetry run yolo_track --source "$(youtube-dl -f 'bestvideo[height<=480]+bestaudio/best[height<=480]' -g 'https://www.youtube.com/watch?v=JJqXeRFsLjE')" --yolo_model models/yolov5m6.pt --save-txt --out-txt /tmp/obj1.txt
 ```
 
 within docker:
