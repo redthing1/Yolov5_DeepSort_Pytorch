@@ -10,6 +10,8 @@ poetry env use python3.7
 poetry install
 # run tracking with preview; if model doesn't exist it'll be downloaded
 poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --show-vid
+# run tracking and stream output to file
+poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --save-txt --out-txt /tmp/track1.txt
 ```
 
 to get more models, just
