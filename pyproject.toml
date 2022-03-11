@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "yolov5_deepsort_pytorch"
+version = "0.1.0"
+description = ""
+authors = ["redthing1 <redthing1@alt.icu>"]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.10"
+matplotlib = ">=3.2.2"
+numpy = ">=1.18.5"
+opencv-python = ">=4.1.2"
+Pillow = ">=7.1.2"
+PyYAML = ">=5.3.1"
+requests = ">=2.23.0"
+scipy = ">=1.4.1"
+tqdm = ">=4.41.0"
+pandas = ">=1.1.4"
+seaborn = ">=0.11.0"
+easydict = "^1.9"
+Cython = "^0.29.28"
+h5py = "^3.6.0"
+six = "^1.16.0"
+tb-nightly = "^2.9.0-alpha.20220310"
+future = "^0.18.2"
+yacs = "^0.1.8"
+gdown = "^4.4.0"
+yapf = "^0.32.0"
+isort = "4.3.21"
+imageio = "^2.16.1"
+torch = "1.10.0"
+torchvision = "0.11.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
