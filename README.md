@@ -14,6 +14,11 @@ poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt -
 poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --save-txt --out-txt /tmp/track1.txt
 ```
 
+within docker:
+```sh
+mkdir -p /tmp/yolo && echo -n > /tmp/yolo/obj1.txt && docker run -v /tmp/yolo:/out -it --rm yolo_track:dev yolo_track.track --source 'https://some-website.domain/some_stream.ts' --yolo_model models/yolov5n6.pt --save-txt --out-txt /out/obj1.txt --frames 10
+```
+
 to get more models, just
 
 ## Yolov5 + Deep Sort with PyTorch
