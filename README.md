@@ -1,7 +1,14 @@
-# Yolov5 + Deep Sort with PyTorch
+# yolov5 deepsort pytorch
 
+real time object detection and tracking
 
+usage:
+```sh
+poetry env use python3.7
+poetry install
+```
 
+## Yolov5 + Deep Sort with PyTorch
 
 
 <div align="center">
