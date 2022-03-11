@@ -80,7 +80,7 @@ RUN pip install -r requirements.txt
 # install runtime deps
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
-    libgl1-mesa-glx ffmpeg libsm6 libxext6 \
+    ffmpeg \
     # clean up
     && apt autoremove -y && apt clean
 
