@@ -186,10 +186,16 @@ def detect(opt):
                             bbox_top = output[1]
                             bbox_w = output[2] - output[0]
                             bbox_h = output[3] - output[1]
-                            # Write MOT compliant results to file
+
+                            # # Write MOT compliant results to file
+                            # with open(txt_path, 'a') as f:
+                            #     f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
+                            #                                    bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))
+                            
+                            # Write results to file in custom format
                             with open(txt_path, 'a') as f:
-                                f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
-                                                               bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))
+                                mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
+                                f.write(f'{mdt_res}{c} {names[c]} {conf:.2f}\n')
 
                 LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
