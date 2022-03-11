@@ -54,9 +54,12 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry export --without-hashes -f requirements.txt > requirements.txt
 
 RUN \
-    # workaround to use torch cpu
-    sed -i 's/torch==1.10.0/torch==1.10.0+cpu/g' requirements.txt \
-    && sed -i '/^torch==1.10.0.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt \
+    # workaround to use torch cpu 1.10.2
+    sed -i 's/torch==1.10.2/torch==1.10.2+cpu/g' requirements.txt \
+    && sed -i '/^torch==1.10.2.*/i -f https://download.pytorch.org/whl/torch_stable.html' requirements.txt \
+    # same thing for torchvision cpu 0.11.3
+    && sed -i 's/torchvision==0.11.3/torchvision==0.11.3+cpu/g' requirements.txt \
+    && sed -i '/^torchvision==0.11.3.*/i -f https://download.pytorch.org/whl/cpu/torch_stable.html' requirements.txt \
     # workaround to use headless opencv
     && sed -i 's/opencv-python/opencv-python-headless/g' requirements.txt
 

@@ -10,6 +10,9 @@ opencv-python = "^4.5.5"
 matplotlib = ">=3.2.2"
 numpy = ">=1.18.5"
 
+torch = "1.10.2"
+torchvision = "0.11.3"
+
 Pillow = ">=7.1.2"
 PyYAML = ">=5.3.1"
 requests = ">=2.23.0"
@@ -28,8 +31,6 @@ gdown = "^4.4.0"
 yapf = "^0.32.0"
 isort = "4.3.21"
 imageio = "^2.16.1"
-torch = "1.10.0"
-torchvision = "0.11.1"
 
 [tool.poetry.dev-dependencies]
 poethepoet = "^0.10.0"
