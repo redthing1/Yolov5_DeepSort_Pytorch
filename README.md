@@ -8,7 +8,7 @@ usage:
 # set up env
 poetry env use python3.7
 poetry install
-# run tracking with preview
+# run tracking with preview; if model doesn't exist it'll be downloaded
 poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --show-vid
 ```
 
