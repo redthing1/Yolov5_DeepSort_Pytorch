@@ -3,10 +3,16 @@
 real time object detection and tracking
 
 usage:
+
 ```sh
+# set up env
 poetry env use python3.7
 poetry install
+# run tracking with preview
+poetry run yolo_track --source test/ducks1.mp4 --yolo_model models/yolov5s6.pt --show-vid
 ```
+
+to get more models, just
 
 ## Yolov5 + Deep Sort with PyTorch
 
