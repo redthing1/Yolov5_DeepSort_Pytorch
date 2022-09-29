@@ -14,6 +14,7 @@ import os
 import platform
 import shutil
 import time
+from datetime import datetime
 import logging
 from pathlib import Path
 import torch
@@ -39,9 +40,9 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 
 def detect(opt):
-    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, imgsz, evaluate, half, project, name, quiet, max_frames, out_txt, exist_ok= \
+    out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, log_rmq, imgsz, evaluate, half, project, name, quiet, max_frames, out_txt, out_rmq, exist_ok= \
         opt.output, opt.source, opt.yolo_model, opt.deep_sort_model, opt.show_vid, opt.save_vid, \
-        opt.save_txt, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.quiet, opt.frames, opt.out_txt, opt.exist_ok, 
+        opt.save_txt, opt.log_rmq, opt.imgsz, opt.evaluate, opt.half, opt.project, opt.name, opt.quiet, opt.frames, opt.out_txt, opt.out_rmq, opt.exist_ok, 
     webcam = source == '0' or source.startswith(
         'rtsp') or source.startswith('http') or source.endswith('.txt')
 
@@ -113,6 +114,17 @@ def detect(opt):
     if out_txt:
         # override txt out path
         txt_path = out_txt
+    
+    if log_rmq:
+        print(f'Logging to RabbitMQ: {out_rmq}')
+        rmq_srv = out_rmq.split(',')[0]
+        rmq_queue = out_rmq.split(',')[1]
+        
+        # connect to rabbitmq
+        import pika
+        rmq_connection = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_srv))
+        rmq_channel = rmq_connection.channel()
+        rmq_channel.queue_declare(queue=rmq_queue)
 
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
@@ -190,22 +202,30 @@ def detect(opt):
                         label = f'#{id} {names[c]} {conf:.2f}'
                         annotator.box_label(bboxes, label, color=colors(c, True))
 
-                        if save_txt:
+                        def format_box_textlog():
                             # to MOT format
                             bbox_left = output[0]
                             bbox_top = output[1]
                             bbox_w = output[2] - output[0]
                             bbox_h = output[3] - output[1]
 
-                            # # Write MOT compliant results to file
-                            # with open(txt_path, 'a') as f:
-                            #     f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
-                            #                                    bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))
-                            
+                            mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
+                            return f'{mdt_res}{c} {names[c]} {conf:.2f}'
+
+                        if save_txt:
                             # Write results to file in custom format
                             with open(txt_path, 'a') as f:
-                                mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
-                                f.write(f'{mdt_res}{c} {names[c]} {conf:.2f}\n')
+                                # mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
+                                # f.write(f'{mdt_res}{c} {names[c]} {conf:.2f}\n')
+                                f.write(format_box_textlog() + '\n')
+                        
+                        if log_rmq:
+                            # send message to rabbitmq
+                            timestamp = datetime.now()
+                            msg = f'{timestamp}|{format_box_textlog()}'
+                            rmq_channel.basic_publish(exchange='', routing_key=rmq_queue, body=msg)
+
+                            LOGGER.info(f'log to rmq: {msg}')
 
                 LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
@@ -261,6 +281,7 @@ def main():
     parser.add_argument('--show-vid', action='store_true', help='display tracking video results')
     parser.add_argument('--save-vid', action='store_true', help='save video tracking results')
     parser.add_argument('--save-txt', action='store_true', help='save MOT compliant results to *.txt')
+    parser.add_argument('--log-rmq', action='store_true', help='log to RabbitMQ')
     # class 0 is person, 1 is bycicle, 2 is car... 79 is oven
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 16 17')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
@@ -274,6 +295,7 @@ def main():
     parser.add_argument('--project', default='runs/track', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--out-txt', default=None, help='directly override output txt file')
+    parser.add_argument('--out-rmq', default=None, help='directly override output rmq queue')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--quiet', action='store_true', help='suppress all non-problem output')
     parser.add_argument('--frames', type=int, default=0, help='max frame count')
