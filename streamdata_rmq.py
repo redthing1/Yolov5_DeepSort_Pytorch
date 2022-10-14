@@ -10,7 +10,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         out_file = sys.argv[2]
 
-    with open(out_file, 'w') as f:
+    with open(out_file, 'a') as f:
         rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(rmq_conn_str)
 
         def msg_callback(ch, method, properties, body):
