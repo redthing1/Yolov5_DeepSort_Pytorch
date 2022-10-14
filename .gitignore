@@ -1,6 +1,8 @@
 models/
 .vscode/
 runs
+keys
+certs
 
 .vscode
 
