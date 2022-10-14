@@ -21,6 +21,7 @@ import torch
 import torch.backends.cudnn as cudnn
 import pika
 import ssl
+from retry import retry
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
@@ -220,7 +221,16 @@ def detect(opt):
                             # send message to rabbitmq
                             timestamp = datetime.now()
                             msg = f'{timestamp}|{format_box_textlog()}'
-                            rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
+
+                            @retry(pika.exceptions.AMQPConnectionError, delay=5, jitter=(1, 3))
+                            def send_rmq_msg():
+                                try:
+                                    rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
+                                except pika.exceptions.ConnectionClosed:
+                                    print('rmq connection closed')
+                                    pass
+                            
+                            send_rmq_msg()
 
                             LOGGER.info(f'log to rmq: {msg}')
 
