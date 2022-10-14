@@ -121,11 +121,11 @@ def detect(opt):
         rmq_srv = split_rmq[0]
         rmq_queue = split_rmq[1]
         rmq_user = None
-        rmq_keyid = None
+        rmq_secstr = None
         if len(split_rmq) > 2:
             rmq_user = split_rmq[2]
         if len(split_rmq) > 3:
-            rmq_keyid = split_rmq[3]
+            rmq_secstr = split_rmq[3]
         
         # connect to rabbitmq
         import pika
@@ -139,18 +139,9 @@ def detect(opt):
             'user': rmq_user.split(':')[0],
             'password': rmq_user.split(':')[1],
         }
-
-        # context = ssl.create_default_context(cafile="./certs/ca_certificate.pem")
-        # context.load_cert_chain(f"./certs/client_{rmq_keyid}_certificate.pem",
-        #                         f"./certs/client_{rmq_keyid}_key.pem")
-        # ssl_options = pika.SSLOptions(context, 'localhost')
-
-        # parameters = pika.ConnectionParameters(host=rabbit_opts['host'],
-        #                                     port=rabbit_opts['port'],
-        #                                     credentials=pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password']),
-        #                                     ssl_options=ssl_options)
+        
         use_creds = rmq_user is not None
-        use_ssl = rmq_keyid is not None
+        use_ssl = rmq_secstr is not None
         connparams = {
             'host': rabbit_opts['host'],
             'port': rabbit_opts['port']
@@ -159,9 +150,11 @@ def detect(opt):
             connparams['credentials'] = pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password'])
         if use_ssl:
             import ssl
-            context = ssl.create_default_context(cafile="./certs/ca_certificate.pem")
-            context.load_cert_chain(f"./certs/client_{rmq_keyid}_certificate.pem",
-                                    f"./certs/client_{rmq_keyid}_key.pem")
+            cert_path = rmq_secstr.split(':')[0]
+            cert_keyid = rmq_secstr.split(':')[1]
+            context = ssl.create_default_context(cafile=f"{cert_path}/ca_certificate.pem")
+            context.load_cert_chain(f"{cert_path}/client_{cert_keyid}_certificate.pem",
+                                    f"{cert_path}/client_{cert_keyid}_key.pem")
             ssl_options = pika.SSLOptions(context, 'localhost')
             connparams['ssl_options'] = ssl_options
         
