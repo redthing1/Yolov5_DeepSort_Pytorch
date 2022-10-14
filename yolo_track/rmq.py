@@ -49,6 +49,6 @@ def connect_rmq_conn_string(conn_str):
         pika.ConnectionParameters(**connparams)
     )
     rmq_channel = rmq_connection.channel()
-    rmq_channel.queue_declare(queue=rmq_queue_id)
+    rmq_channel.queue_declare(queue=rmq_queue_id, durable=True)
 
     return rmq_connection, rmq_channel, rmq_queue_id
