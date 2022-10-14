@@ -19,6 +19,8 @@ import logging
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
+import pika
+import ssl
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
@@ -31,6 +33,7 @@ from deep_sort.utils.parser import get_config
 from deep_sort.deep_sort import DeepSort
 
 from .datasets import LoadImages, LoadStreams
+from .rmq import connect_rmq_conn_string
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 deepsort root directory
@@ -117,51 +120,8 @@ def detect(opt):
     
     if log_rmq:
         print(f'Logging to RabbitMQ: {out_rmq}')
-        split_rmq = out_rmq.split(',')
-        rmq_srv = split_rmq[0]
-        rmq_queue = split_rmq[1]
-        rmq_user = None
-        rmq_secstr = None
-        if len(split_rmq) > 2:
-            rmq_user = split_rmq[2]
-        if len(split_rmq) > 3:
-            rmq_secstr = split_rmq[3]
-        
-        # connect to rabbitmq
-        import pika
-        # rmq_connection = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_srv))
-        # rmq_channel = rmq_connection.channel()
-        # rmq_channel.queue_declare(queue=rmq_queue)
 
-        rabbit_opts = {
-            'host': rmq_srv.split(':')[0],
-            'port': int(rmq_srv.split(':')[1]),
-            'user': rmq_user.split(':')[0],
-            'password': rmq_user.split(':')[1],
-        }
-        
-        use_creds = rmq_user is not None
-        use_ssl = rmq_secstr is not None
-        connparams = {
-            'host': rabbit_opts['host'],
-            'port': rabbit_opts['port']
-        }
-        if use_creds:
-            connparams['credentials'] = pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password'])
-        if use_ssl:
-            import ssl
-            cert_path = rmq_secstr.split(':')[0]
-            cert_keyid = rmq_secstr.split(':')[1]
-            context = ssl.create_default_context(cafile=f"{cert_path}/ca_certificate.pem")
-            context.load_cert_chain(f"{cert_path}/client_{cert_keyid}_certificate.pem",
-                                    f"{cert_path}/client_{cert_keyid}_key.pem")
-            ssl_options = pika.SSLOptions(context, 'localhost')
-            connparams['ssl_options'] = ssl_options
-        
-        rmq_connection = pika.BlockingConnection(pika.ConnectionParameters(**connparams))
-        
-        rmq_channel = rmq_connection.channel()
-        rmq_channel.queue_declare(queue=rmq_queue)
+        rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
 
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
@@ -260,7 +220,7 @@ def detect(opt):
                             # send message to rabbitmq
                             timestamp = datetime.now()
                             msg = f'{timestamp}|{format_box_textlog()}'
-                            rmq_channel.basic_publish(exchange='', routing_key=rmq_queue, body=msg)
+                            rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
 
                             LOGGER.info(f'log to rmq: {msg}')
 
