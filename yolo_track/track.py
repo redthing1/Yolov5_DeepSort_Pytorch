@@ -130,7 +130,7 @@ def detect(opt):
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
 
     seen_frames = 0
-    for frame_idx, (path, img, im0s, vid_cap, s) in enumerate(dataset):
+    for frame_idx, (path, img, im0s, vid_cap, summary) in enumerate(dataset):
         if max_frames > 0 and seen_frames >= max_frames:
             break
 
@@ -155,33 +155,33 @@ def detect(opt):
         dt[2] += time_sync() - t3
 
         # Process detections
-        for i, det in enumerate(pred):  # detections per image
+        for i, detection in enumerate(pred):  # detections per image
             seen += 1
             if webcam:  # batch_size >= 1
                 p, im0, _ = path[i], im0s[i].copy(), dataset.count
-                s += f'{i}: '
+                summary += f'{i}: '
             else:
                 p, im0, _ = path, im0s.copy(), getattr(dataset, 'frame', 0)
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg, vid.mp4, ...
-            s += '%gx%g ' % img.shape[2:]  # print string
+            summary += '%gx%g ' % img.shape[2:]  # print string
 
             annotator = Annotator(im0, line_width=2, pil=not ascii)
 
-            if det is not None and len(det):
+            if detection is not None and len(detection):
                 # Rescale boxes from img_size to im0 size
-                det[:, :4] = scale_coords(
-                    img.shape[2:], det[:, :4], im0.shape).round()
+                detection[:, :4] = scale_coords(
+                    img.shape[2:], detection[:, :4], im0.shape).round()
 
                 # Print results
-                for c in det[:, -1].unique():
-                    n = (det[:, -1] == c).sum()  # detections per class
-                    s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+                for c in detection[:, -1].unique():
+                    n = (detection[:, -1] == c).sum()  # detections per class
+                    summary += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                xywhs = xyxy2xywh(det[:, 0:4])
-                confs = det[:, 4]
-                clss = det[:, 5]
+                xywhs = xyxy2xywh(detection[:, 0:4])
+                confs = detection[:, 4]
+                clss = detection[:, 5]
 
                 # pass detections to deepsort
                 t4 = time_sync()
@@ -190,8 +190,11 @@ def detect(opt):
                 dt[3] += t5 - t4
 
                 # draw boxes for visualization
+                num_outputs = len(outputs)
                 if len(outputs) > 0:
+                    print(f' detected {num_outputs} objects')
                     for j, (output, conf) in enumerate(zip(outputs, confs)):
+                        print(f' frame: {frame_idx}, output ix: {j}/{len(outputs)}')
 
                         bboxes = output[0:4]
                         id = output[4]
@@ -226,15 +229,16 @@ def detect(opt):
                             while True:
                                 try:
                                     rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
-                                    LOGGER.info(f'rmq: {msg}')
+                                    LOGGER.info(f'  rmq: {msg}')
                                     break
                                 except pika.exceptions.ConnectionClosed:
-                                    print('rmq connection closed, trying to reconnect')
+                                    print('  rmq connection closed, trying to reconnect')
                                     # delay a bit to avoid spamming the server
                                     time.sleep(1)
                                     rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
                                     continue
-                LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
+                
+                LOGGER.info(f'Summary: {summary}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
             else:
                 deepsort.increment_ages()
