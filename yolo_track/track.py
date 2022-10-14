@@ -120,6 +120,7 @@ def detect(opt):
         split_rmq = out_rmq.split(',')
         rmq_srv = split_rmq[0]
         rmq_queue = split_rmq[1]
+        rmq_user = None
         rmq_keyid = None
         if len(split_rmq) > 2:
             rmq_user = split_rmq[2]
@@ -128,7 +129,6 @@ def detect(opt):
         
         # connect to rabbitmq
         import pika
-        import ssl
         # rmq_connection = pika.BlockingConnection(pika.ConnectionParameters(host=rmq_srv))
         # rmq_channel = rmq_connection.channel()
         # rmq_channel.queue_declare(queue=rmq_queue)
@@ -140,17 +140,33 @@ def detect(opt):
             'password': rmq_user.split(':')[1],
         }
 
-        context = ssl.create_default_context(cafile="./certs/ca_certificate.pem")
-        context.load_cert_chain(f"./certs/client_{rmq_keyid}_certificate.pem",
-                                f"./certs/client_{rmq_keyid}_key.pem")
-        ssl_options = pika.SSLOptions(context, 'localhost')
+        # context = ssl.create_default_context(cafile="./certs/ca_certificate.pem")
+        # context.load_cert_chain(f"./certs/client_{rmq_keyid}_certificate.pem",
+        #                         f"./certs/client_{rmq_keyid}_key.pem")
+        # ssl_options = pika.SSLOptions(context, 'localhost')
 
-        parameters = pika.ConnectionParameters(host=rabbit_opts['host'],
-                                            port=rabbit_opts['port'],
-                                            credentials=pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password']),
-                                            ssl_options=ssl_options)
+        # parameters = pika.ConnectionParameters(host=rabbit_opts['host'],
+        #                                     port=rabbit_opts['port'],
+        #                                     credentials=pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password']),
+        #                                     ssl_options=ssl_options)
+        use_creds = rmq_user is not None
+        use_ssl = rmq_keyid is not None
+        connparams = {
+            'host': rabbit_opts['host'],
+            'port': rabbit_opts['port']
+        }
+        if use_creds:
+            connparams['credentials'] = pika.PlainCredentials(rabbit_opts['user'], rabbit_opts['password'])
+        if use_ssl:
+            import ssl
+            context = ssl.create_default_context(cafile="./certs/ca_certificate.pem")
+            context.load_cert_chain(f"./certs/client_{rmq_keyid}_certificate.pem",
+                                    f"./certs/client_{rmq_keyid}_key.pem")
+            ssl_options = pika.SSLOptions(context, 'localhost')
+            connparams['ssl_options'] = ssl_options
         
-        rmq_connection = pika.BlockingConnection(parameters)
+        rmq_connection = pika.BlockingConnection(pika.ConnectionParameters(**connparams))
+        
         rmq_channel = rmq_connection.channel()
         rmq_channel.queue_declare(queue=rmq_queue)
 
