@@ -26,6 +26,8 @@ def connect_rmq_conn_string(conn_str):
     connparams = {
         "host": rabbit_opts["host"],
         "port": rabbit_opts["port"],
+        "heartbeat": 600,
+        "blocked_connection_timeout": 300,
     }
 
     if use_creds:
