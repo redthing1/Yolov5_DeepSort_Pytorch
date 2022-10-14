@@ -119,6 +119,7 @@ def detect(opt):
         # override txt out path
         txt_path = out_txt
     
+    rmq_connection, rmq_channel, rmq_queue_id = None, None, None
     if log_rmq:
         print(f'Logging to RabbitMQ: {out_rmq}')
 
@@ -222,15 +223,16 @@ def detect(opt):
                             timestamp = datetime.now()
                             msg = f'{timestamp}|{format_box_textlog()}'
 
-                            @retry(pika.exceptions.AMQPConnectionError, delay=5, jitter=(1, 3))
-                            def send_rmq_msg():
+                            while True:
                                 try:
                                     rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
+                                    break
                                 except pika.exceptions.ConnectionClosed:
-                                    print('rmq connection closed')
-                                    pass
-                            
-                            send_rmq_msg()
+                                    print('rmq connection closed, trying to reconnect')
+                                    # delay a bit to avoid spamming the server
+                                    time.sleep(1)
+                                    rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
+                                    continue
 
                             LOGGER.info(f'log to rmq: {msg}')
 
