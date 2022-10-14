@@ -5,7 +5,7 @@ description = "yolov5 + deepsort + pytorch"
 authors = ["redthing1 <redthing1@alt.icu>"]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<4.0"
+python = ">=3.7,<3.10"
 opencv-python = "^4.5.5"
 matplotlib = ">=3.2.2"
 numpy = ">=1.18.5"
