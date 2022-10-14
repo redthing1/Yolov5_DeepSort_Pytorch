@@ -226,6 +226,7 @@ def detect(opt):
                             while True:
                                 try:
                                     rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
+                                    LOGGER.info(f'rmq: {msg}')
                                     break
                                 except pika.exceptions.ConnectionClosed:
                                     print('rmq connection closed, trying to reconnect')
@@ -233,9 +234,6 @@ def detect(opt):
                                     time.sleep(1)
                                     rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
                                     continue
-
-                            LOGGER.info(f'log to rmq: {msg}')
-
                 LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
             else:
