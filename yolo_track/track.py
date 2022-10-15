@@ -42,6 +42,10 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
+rmq_connection, rmq_channel, rmq_queue_id = None, None, None
+
+def get_timestamp():
+    return str(datetime.now())
 
 def detect(opt):
     out, source, yolo_model, deep_sort_model, show_vid, save_vid, save_txt, log_rmq, imgsz, evaluate, half, project, name, quiet, max_frames, out_txt, out_rmq, exist_ok= \
@@ -119,11 +123,26 @@ def detect(opt):
         # override txt out path
         txt_path = out_txt
     
-    rmq_connection, rmq_channel, rmq_queue_id = None, None, None
+    global rmq_connection, rmq_channel, rmq_queue_id
     if log_rmq:
         print(f'Logging to RabbitMQ: {out_rmq}')
-
         rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
+    
+    def send_rmq_message(msg):
+        global rmq_connection, rmq_channel, rmq_queue_id
+        retries = 5
+        while retries > 0:
+            try:
+                rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
+                LOGGER.info(f'  rmq: {msg}')
+                break
+            except pika.exceptions.ConnectionClosed:
+                print('  rmq connection closed, trying to reconnect')
+                # delay a bit to avoid spamming the server
+                time.sleep(1)
+                retries -= 1
+                rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
+                continue
 
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
@@ -154,6 +173,8 @@ def detect(opt):
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, opt.classes, opt.agnostic_nms, max_det=opt.max_det)
         dt[2] += time_sync() - t3
 
+        num_detections = 0
+
         # Process detections
         for i, detection in enumerate(pred):  # detections per image
             seen += 1
@@ -178,10 +199,25 @@ def detect(opt):
                 for c in detection[:, -1].unique():
                     n = (detection[:, -1] == c).sum()  # detections per class
                     summary += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+                    num_detections += n
 
                 xywhs = xyxy2xywh(detection[:, 0:4])
                 confs = detection[:, 4]
                 clss = detection[:, 5]
+
+                # summarize results
+                for sri, det in enumerate(detection):
+                    # print(f' detection: {det}')
+                    def format_det_obj_textlog():
+                        c = int(det[5])
+                        box_rect = xywhs[sri]
+                        confidence = det[4]
+                        return f'{frame_idx+1} {int(box_rect[0])} {int(box_rect[1])} {int(box_rect[2])} {int(box_rect[3])} {c} {names[c]} {confidence:.2f}'
+                    if log_rmq:
+                        # send message to rabbitmq
+                        timestamp = get_timestamp()
+                        msg = f'{timestamp}|det|{format_det_obj_textlog()}'
+                        send_rmq_message(msg)
 
                 # pass detections to deepsort
                 t4 = time_sync()
@@ -191,10 +227,10 @@ def detect(opt):
 
                 # draw boxes for visualization
                 num_outputs = len(outputs)
+                print(f' reid {num_outputs}/{num_detections} objects out of detections')
                 if len(outputs) > 0:
-                    print(f' detected {num_outputs} objects')
                     for j, (output, conf) in enumerate(zip(outputs, confs)):
-                        print(f' frame: {frame_idx}, output ix: {j}/{len(outputs)}')
+                        # print(f' frame: {frame_idx}, output ix: {j}/{len(outputs)}')
 
                         bboxes = output[0:4]
                         id = output[4]
@@ -204,39 +240,29 @@ def detect(opt):
                         label = f'#{id} {names[c]} {conf:.2f}'
                         annotator.box_label(bboxes, label, color=colors(c, True))
 
-                        def format_box_textlog():
+                        def format_reid_obj_textlog():
                             # to MOT format
                             bbox_left = output[0]
                             bbox_top = output[1]
                             bbox_w = output[2] - output[0]
                             bbox_h = output[3] - output[1]
 
-                            mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
-                            return f'{mdt_res}{c} {names[c]} {conf:.2f}'
+                            # mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
+                            # return f'{mdt_res}{c} {names[c]} {conf:.2f}'
+                            return f'{frame_idx+1} {id} {bbox_left} {bbox_top} {bbox_w} {bbox_h} {c} {names[c]} {conf:.2f}'
 
                         if save_txt:
                             # Write results to file in custom format
                             with open(txt_path, 'a') as f:
                                 # mdt_res = ('%g ' * 10) % (frame_idx + 1, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1)
                                 # f.write(f'{mdt_res}{c} {names[c]} {conf:.2f}\n')
-                                f.write(format_box_textlog() + '\n')
+                                f.write(format_reid_obj_textlog() + '\n')
                         
                         if log_rmq:
                             # send message to rabbitmq
-                            timestamp = datetime.now()
-                            msg = f'{timestamp}|{format_box_textlog()}'
-
-                            while True:
-                                try:
-                                    rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
-                                    LOGGER.info(f'  rmq: {msg}')
-                                    break
-                                except pika.exceptions.ConnectionClosed:
-                                    print('  rmq connection closed, trying to reconnect')
-                                    # delay a bit to avoid spamming the server
-                                    time.sleep(1)
-                                    rmq_connection, rmq_channel, rmq_queue_id = connect_rmq_conn_string(out_rmq)
-                                    continue
+                            timestamp = get_timestamp()
+                            msg = f'{timestamp}|reid|{format_reid_obj_textlog()}'
+                            send_rmq_message(msg)
                 
                 LOGGER.info(f'Summary: {summary}Done. YOLO:({t3 - t2:.3f}s), DeepSort:({t5 - t4:.3f}s)')
 
