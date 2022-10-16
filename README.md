@@ -22,7 +22,10 @@ poetry run yolo_track --source "$(yt-dlp -f 'bestvideo[height<=480]+bestaudio/be
 
 within docker:
 ```sh
+# basic test
 mkdir -p /tmp/yolo && echo -n > /tmp/yolo/obj1.txt && docker run -v /tmp/yolo:/out -it --rm yolo_track:dev yolo_track.track --source 'https://some-website.domain/some_stream.ts' --yolo_model models/yolov5n6.pt --save-txt --out-txt /out/obj1.txt --frames 10
+# live tracking and data streaming
+podman run -it --rm -v $(pwd)/certs:/certs xdrie/yolo_track:v0.6 yolo_track.track --source <stream_url> --yolo_model models/yolov5n6.pt --deep_sort_model osnet_ain_x0_5 --log-rmq --out-rmq <rmq_connstr>
 ```
 
 to get more models, just
