@@ -35,7 +35,9 @@ def connect_rmq_conn_string(conn_str):
             rabbit_opts["user"], rabbit_opts["password"]
         )
     if use_ssl:
-        cert_path = rmq_secstr.split(":")[0]
+        from os.path import expanduser
+
+        cert_path = expanduser(rmq_secstr.split(":")[0])
         cert_keyid = rmq_secstr.split(":")[1]
         context = ssl.create_default_context(cafile=f"{cert_path}/ca_certificate.pem")
         context.load_cert_chain(

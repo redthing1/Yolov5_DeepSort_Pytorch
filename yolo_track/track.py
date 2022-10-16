@@ -136,7 +136,7 @@ def detect(opt):
                 rmq_channel.basic_publish(exchange='', routing_key=rmq_queue_id, body=msg)
                 LOGGER.info(f'  rmq: {msg}')
                 break
-            except pika.exceptions.ConnectionClosed:
+            except (pika.exceptions.ConnectionClosed, pika.exceptions.StreamLostError):
                 print('  rmq connection closed, trying to reconnect')
                 # delay a bit to avoid spamming the server
                 time.sleep(1)
